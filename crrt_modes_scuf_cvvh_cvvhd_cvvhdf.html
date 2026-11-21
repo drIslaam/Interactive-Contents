@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRRT modes: SCUF vs CVVH vs CVVHD vs CVVHDF</title>
+<style>
+:root{--text-primary:#1f1e1d;--text-secondary:#5f5e5a;--bg-neutral:#f1efe8;--border-strong:#b4b2a9;--surface-2:#ffffff}
+@media (prefers-color-scheme:dark){:root{--text-primary:#ecebe6;--text-secondary:#b4b2a9;--bg-neutral:#2c2c2a;--border-strong:#5f5e5a;--surface-2:#1a1a19}body{background:#1a1a19}}
+body{font-family:"Segoe UI",Tahoma,system-ui,sans-serif;margin:0;padding:16px;max-width:760px;margin-inline:auto}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+input[type=range]{width:100%}
+</style></head><body>
+<style>
+.mx{direction:rtl;font-size:14px;color:var(--text-primary);line-height:1.6}
+.mx .pills{display:flex;gap:8px;flex-wrap:wrap;direction:ltr;justify-content:center;margin:4px 0 10px}
+.mx button{font:inherit;cursor:pointer;border:1px solid var(--border-strong);background:transparent;color:var(--text-primary);border-radius:999px;padding:6px 16px}
+.mx button.on{background:var(--text-primary);color:var(--surface-2,#fff);border-color:var(--text-primary)}
+.mx .lbl{font-size:12px;fill:var(--text-secondary)}
+.mx .lbm{font-size:13px;fill:var(--text-primary);font-weight:500}
+.mx .box{background:var(--bg-neutral);border-radius:12px;padding:10px 14px;margin:8px 0}
+.mx .k{font-size:12px;color:var(--text-secondary)}
+.mx .bar{display:flex;height:28px;border-radius:6px;overflow:hidden;direction:ltr;margin:6px 0}
+.mx .bar div{transition:width .3s;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;white-space:nowrap;overflow:hidden}
+.mx .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0}
+.mx .v{font-size:19px;font-weight:500;direction:ltr;text-align:right}
+.mx .ctl{display:grid;grid-template-columns:170px 1fr 90px;gap:8px;align-items:center;font-size:13px;color:var(--text-secondary);margin:6px 0}
+.mx .ctl span:last-child{direction:ltr;text-align:left}
+.mx .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary)}
+.mx .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:5px;vertical-align:middle}
+</style>
+<div class="mx">
+<h2 class="sr-only">Interactive CRRT filter simulation comparing SCUF, CVVH, CVVHD and CVVHDF: animated toxins and water crossing the membrane, effluent composition, dose and whether replacement fluid is needed.</h2>
+<div class="pills" id="pills"></div>
+<svg width="100%" viewBox="0 0 680 360" role="img" id="sv" style="direction:ltr">
+<title>CRRT filter</title><desc>Blood flows through a filter; toxins and water cross the membrane into the effluent depending on the selected mode.</desc>
+<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<rect x="60" y="120" width="560" height="50" rx="8" fill="#E24B4A" fill-opacity=".1" stroke="#E24B4A" stroke-opacity=".4" stroke-width=".5"/>
+<rect id="low" x="170" y="180" width="340" height="50" fill="#378ADD" fill-opacity=".1"/>
+<rect x="170" y="105" width="340" height="135" rx="10" fill="none" stroke="#888780" stroke-width=".8"/>
+<line x1="170" y1="175" x2="510" y2="175" stroke="#888780" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text class="lbl" x="340" y="97" text-anchor="middle">Hemofilter (membrane = dashed line)</text>
+<text class="lbl" x="62" y="112">From patient</text>
+<text class="lbl" x="618" y="112" text-anchor="end">To patient</text>
+<text class="lbl" id="lowLbl" x="340" y="252" text-anchor="middle"></text>
+<line x1="180" y1="232" x2="180" y2="268" stroke="#BA7517" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="120" y="270" width="120" height="60" rx="8" fill="none" stroke="#BA7517" stroke-width="1"/>
+<g id="effStack"></g>
+<text class="lbm" x="180" y="350" text-anchor="middle" id="effLbl">Effluent</text>
+<g id="dialG">
+<line x1="500" y1="268" x2="500" y2="234" stroke="#378ADD" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="440" y="270" width="120" height="60" rx="8" fill="#378ADD" fill-opacity=".15" stroke="#378ADD" stroke-width="1"/>
+<text class="lbm" x="500" y="295" text-anchor="middle">Dialysate</text>
+<text class="lbl" x="500" y="315" text-anchor="middle" id="dLbl"></text></g>
+<g id="repG">
+<rect x="500" y="20" width="120" height="50" rx="8" fill="#1D9E75" fill-opacity=".15" stroke="#1D9E75" stroke-width="1"/>
+<text class="lbm" x="560" y="41" text-anchor="middle">Replacement</text>
+<text class="lbl" x="560" y="59" text-anchor="middle" id="rLbl"></text>
+<line x1="560" y1="72" x2="560" y2="116" stroke="#1D9E75" stroke-width="2" marker-end="url(#ar)"/></g>
+<g id="pg"></g>
+</svg>
+<div class="leg"><span><i class="dot" style="background:#E24B4A"></i>خلايا دم (ماتعدّيش)</span><span><i class="dot" style="background:#EF9F27"></i>سموم (يوريا، بوتاسيوم)</span><span><i class="dot" style="background:#378ADD"></i>مية من الدم</span><span><i class="dot" style="background:#1D9E75"></i>سائل تعويضي</span></div>
+<div class="box"><div class="k">آلية التنضيف</div><div id="mech" style="font-weight:500"></div><div class="k" style="margin-top:6px">التشبيه: حلّة شوربة مالحة (الملح = السموم)</div><div id="ana"></div></div>
+<div class="k">مكوّنات كيس الـ"Effluent" (كل ده = الجرعة)</div>
+<div class="bar" id="bar"><div id="bD" style="background:#378ADD"></div><div id="bR" style="background:#1D9E75"></div><div id="bN" style="background:#D85A30"></div></div>
+<div class="cards">
+<div class="box" style="margin:0"><div class="k">إجمالي الـ"Effluent"</div><div class="v" id="cE"></div><div class="k">mL/h</div></div>
+<div class="box" style="margin:0"><div class="k">الجرعة</div><div class="v" id="cD"></div><div class="k" id="cDn">mL/kg/h</div></div>
+<div class="box" style="margin:0"><div class="k">محتاج سائل تعويضي؟</div><div class="v" id="cR"></div><div class="k" id="cRn"></div></div>
+</div>
+<div class="ctl"><span>الوزن</span><input type="range" id="wt" min="40" max="150" value="80"><span id="wtV"></span></div>
+<div class="ctl" id="doseRow"><span>الجرعة المطلوبة</span><input type="range" id="ds" min="15" max="50" value="25"><span id="dsV"></span></div>
+<div class="ctl"><span>السحب الصافي (Qnet)</span><input type="range" id="nt" min="0" max="400" step="10" value="200"><span id="ntV"></span></div>
+<div class="ctl" id="splitRow"><span>نسبة الـ"Dialysate" من الباقي</span><input type="range" id="sp" min="10" max="90" step="5" value="50"><span id="spV"></span></div>
+<div class="box" style="margin-top:14px"><div style="font-weight:500">لعبة: مين أنا؟</div><div class="k">ده كيس "Effluent" من مريض. شوف مكوّناته وخمّن نوع الغسيل.</div><div id="gQ" style="direction:ltr;text-align:right;margin:8px 0;font-weight:500"></div><div class="pills" id="gB" style="justify-content:flex-end"></div><div id="gF" style="min-height:24px"></div><button id="gN" style="margin-top:4px">سؤال تاني</button></div>
+</div>
+<script>
+(function(){
+const $=i=>document.getElementById(i),NS='http://www.w3.org/2000/svg';
+const M={
+SCUF:{mech:'مفيش تنضيف يُذكر: سحب مية بس عشان الـ"fluid overload".',ana:'بتغرف شوربة وترميها: الكمية بتقلّ، لكن الملوحة زي ما هي.',rep:false},
+CVVH:{mech:'الـ"Convection" «الحَمْل»: الفلتر بيسحب مية كتير، والمية بتسحب معاها السموم.',ana:'بتغرف شوربة مالحة كتير وتحط مكانها مية نضيفة، فالملوحة بتقلّ.',rep:true},
+CVVHD:{mech:'الـ"Diffusion" «الانتشار»: السموم بتعدّي لوحدها للـ"Dialysate" النضيف من غير ما المية تتسحب.',ana:'بتحط في الحلّة إسفنجة بتمصّ الملح من غير ما تغرف ولا نقطة.',rep:false},
+CVVHDF:{mech:'الاتنين مع بعض: «حَمْل» + «انتشار».',ana:'بتغرف شوية وتعوّض بمية نضيفة، وفي نفس الوقت حاطط الإسفنجة.',rep:true}};
+let mode='CVVHDF',F={d:0,r:0,n:0};
+const pills=$('pills');Object.keys(M).forEach(k=>{const b=document.createElement('button');b.textContent=k;b.onclick=()=>{mode=k;upd();};b.dataset.m=k;pills.appendChild(b);});
+function upd(){
+ const w=+$('wt').value,ds=+$('ds').value,n=+$('nt').value,sp=+$('sp').value/100;
+ $('wtV').textContent=w+' kg';$('dsV').textContent=ds+' mL/kg/h';$('ntV').textContent=n+' mL/h';$('spV').textContent=Math.round(sp*100)+'%';
+ [...pills.children].forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
+ const tot=Math.max(ds*w,n),rest=Math.max(0,tot-n);
+ if(mode==='SCUF')F={d:0,r:0,n:n};else if(mode==='CVVH')F={d:0,r:rest,n:n};else if(mode==='CVVHD')F={d:rest,r:0,n:n};else F={d:Math.round(rest*sp),r:rest-Math.round(rest*sp),n:n};
+ const E=F.d+F.r+F.n;
+ $('doseRow').style.opacity=mode==='SCUF'?.35:1;$('splitRow').style.opacity=mode==='CVVHDF'?1:.35;
+ $('mech').textContent=M[mode].mech;$('ana').textContent=M[mode].ana;
+ const pc=x=>E?(x/E*100)+'%':'0%';
+ $('bD').style.width=pc(F.d);$('bR').style.width=pc(F.r);$('bN').style.width=pc(F.n);
+ $('bD').textContent=F.d?'Dialysate '+F.d:'';$('bR').textContent=F.r?'Replacement '+F.r:'';$('bN').textContent=F.n?'Net '+F.n:'';
+ $('cE').textContent=E;
+ if(mode==='SCUF'){$('cD').textContent='—';$('cDn').textContent='مالوش جرعة تنضيف';}else{$('cD').textContent=(E/w).toFixed(1);$('cDn').textContent='mL/kg/h';}
+ $('cR').textContent=M[mode].rep?'أيوه':'لأ';$('cR').style.color=M[mode].rep?'#1D9E75':'var(--text-secondary)';
+ $('cRn').textContent=M[mode].rep?'عشان المية اللي اتسحبت كتير':'مفيش مية كتير اتسحبت';
+ $('dialG').style.opacity=F.d?1:.15;$('repG').style.opacity=F.r?1:.15;$('dLbl').textContent=F.d+' mL/h';$('rLbl').textContent=F.r+' mL/h';
+ $('low').setAttribute('fill',F.d?'#378ADD':'#EF9F27');
+ $('lowLbl').textContent=F.d?'Dialysate flows ← opposite to blood':'Ultrafiltrate (water pulled from blood)';
+ const st=$('effStack');st.innerHTML='';let y=328;[[F.n,'#D85A30'],[F.r,'#1D9E75'],[F.d,'#378ADD']].forEach(([v,c])=>{if(!v)return;const h=56*v/E;const r=document.createElementNS(NS,'rect');r.setAttribute('x',122);r.setAttribute('width',116);r.setAttribute('y',y-h);r.setAttribute('height',h);r.setAttribute('fill',c);r.setAttribute('fill-opacity','.75');st.appendChild(r);y-=h;});
+ $('effLbl').textContent='Effluent '+E+' mL/h';
+}
+['wt','ds','nt','sp'].forEach(i=>$(i).addEventListener('input',upd));upd();
+const pg=$('pg'),P=[];
+function mk(t,r,c){const e=document.createElementNS(NS,'circle');e.setAttribute('r',r);e.setAttribute('fill',c);pg.appendChild(e);const o={e,t,x:-50,y:-50,s:'off'};P.push(o);return o;}
+for(let i=0;i<14;i++){const o=mk('rbc',5,'#E24B4A');o.x=60+Math.random()*560;o.y=130+Math.random()*30;o.s='blood';}
+for(let i=0;i<20;i++){const o=mk('tox',3.2,'#EF9F27');o.x=60+Math.random()*560;o.y=128+Math.random()*34;o.s='blood';}
+for(let i=0;i<22;i++)mk('h2o',2.6,'#378ADD');
+for(let i=0;i<12;i++)mk('rep',2.8,'#1D9E75');
+const free=t=>P.find(p=>p.t===t&&p.s==='off');
+function drop(x){const d=free('h2o');if(!d)return;d.x=x+Math.random()*6-3;d.y=150+Math.random()*12;d.s='cross';}
+function step(){
+ const E=F.d+F.r+F.n,conv=F.r+F.n,cs=E?conv/E:0,low=F.d?-1.1:-0.6;
+ if(conv>0&&Math.random()<0.1*conv/2000)drop(190+Math.random()*300);
+ if(F.r>0&&Math.random()<0.09*F.r/1500){const r=free('rep');if(r){r.x=560;r.y=78;r.s='in';}}
+ P.forEach(p=>{
+  if(p.s==='blood'){p.x+=1.3;if(p.x>618){p.x=62;p.y=128+Math.random()*34;}
+   if(p.t==='tox'&&p.x>185&&p.x<495&&mode!=='SCUF'||p.t==='tox'&&mode==='SCUF'&&p.x>185&&p.x<495&&Math.random()<0.25){
+    if(Math.random()<0.012*E/2000){p.s='cross';if(Math.random()<cs)drop(p.x);}}}
+  else if(p.s==='cross'){p.y+=1.4;if(p.y>=184+Math.random()*30)p.s='low';}
+  else if(p.s==='low'){p.x+=low;if(p.x<=182){p.s='out';}}
+  else if(p.s==='out'){p.x=180;p.y+=1.6;if(p.y>268){if(p.t==='tox'){p.s='blood';p.x=62;p.y=128+Math.random()*34;}else{p.s='off';p.x=-50;p.y=-50;}}}
+  else if(p.s==='in'){p.y+=1.4;if(p.y>=128+Math.random()*34){p.s='flow';}}
+  else if(p.s==='flow'){p.x+=1.3;if(p.x>618){p.s='off';p.x=-50;p.y=-50;}}
+  p.e.setAttribute('cx',p.x.toFixed(1));p.e.setAttribute('cy',p.y.toFixed(1));
+ });
+}
+const still=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+if(still){for(let i=0;i<200;i++)step();}else{(function loop(){step();requestAnimationFrame(loop);})();}
+const G=[{q:'Replacement 1800 + Net 200',a:'CVVH'},{q:'Net 300 (only)',a:'SCUF'},{q:'Dialysate 1600 + Net 150',a:'CVVHD'},{q:'Dialysate 1000 + Replacement 1000 + Net 200',a:'CVVHDF'},{q:'Replacement 2300 + Net 100',a:'CVVH'},{q:'Dialysate 2000 + Net 0',a:'CVVHD'}];
+const why={SCUF:'مفيش غير سحب صافي: مية بس.',CVVH:'تعويضي من غير "Dialysate": «حَمْل» بس.',CVVHD:'"Dialysate" من غير تعويضي: «انتشار» بس.',CVVHDF:'الاتنين موجودين: «حَمْل» + «انتشار».'};
+let gi=0;
+function ng(){gi=Math.floor(Math.random()*G.length);$('gQ').textContent=G[gi].q;$('gF').textContent='';}
+Object.keys(M).forEach(k=>{const b=document.createElement('button');b.textContent=k;b.onclick=()=>{const ok=k===G[gi].a;$('gF').textContent=(ok?'✔ صح! ':'✘ لأ، الإجابة \u2066'+G[gi].a+'\u2069. ')+why[G[gi].a];$('gF').style.color=ok?'#1D9E75':'#E24B4A';};$('gB').appendChild(b);});
+$('gN').onclick=ng;ng();
+})();
+</script>
+
+</body></html>
