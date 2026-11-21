@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRRT dose: 25–30 mL/kg/h — المكتوب مقابل الواصل</title>
+<style>
+:root{--text-primary:#1f1e1d;--text-secondary:#5f5e5a;--bg-neutral:#f1efe8;--bg-success:#e1f5ee;--border-success:#1d9e75;--border-strong:#b4b2a9}
+@media (prefers-color-scheme:dark){:root{--text-primary:#ecebe6;--text-secondary:#b4b2a9;--bg-neutral:#2c2c2a;--bg-success:#04342c;--border-success:#5dcaa5;--border-strong:#5f5e5a}body{background:#1a1a19}}
+body{font-family:"Segoe UI",Tahoma,system-ui,sans-serif;margin:0;padding:16px;max-width:760px;margin-inline:auto}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+input[type=range]{width:100%}
+</style></head><body>
+<style>
+.cd{direction:rtl;font-size:14px;color:var(--text-primary)}
+.cd .row{display:grid;grid-template-columns:150px 1fr 70px;gap:10px;align-items:center;margin:8px 0}
+.cd .trk{position:relative;height:26px;background:var(--bg-neutral);border-radius:6px;overflow:hidden}
+.cd .band{position:absolute;top:0;bottom:0;background:var(--bg-success);border-left:1px dashed var(--border-success);border-right:1px dashed var(--border-success)}
+.cd .fill{position:absolute;top:5px;bottom:5px;right:0;border-radius:4px;transition:width .25s}
+.cd .num{font-weight:500;direction:ltr;text-align:left}
+.cd .ctl{display:grid;grid-template-columns:150px 1fr 90px;gap:8px;align-items:center;font-size:13px;color:var(--text-secondary);margin:6px 0}
+.cd .ctl span:last-child{direction:ltr;text-align:left}
+.cd .strip{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;margin:6px 0 2px;direction:ltr}
+.cd .strip div{height:16px;border-radius:3px}
+.cd .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.cd .card{background:var(--bg-neutral);border-radius:12px;padding:10px 12px}
+.cd .k{font-size:12px;color:var(--text-secondary)}
+.cd .v{font-size:20px;font-weight:500;direction:ltr;text-align:right}
+</style>
+<div class="cd">
+<h2 class="sr-only">Interactive CRRT dose calculator showing how a prescribed 25 to 30 mL/kg/h effluent dose shrinks to the delivered dose after downtime and pre-dilution.</h2>
+<div class="row"><span>الجرعة المكتوبة</span><div class="trk"><div class="band" id="b1"></div><div class="fill" id="f1" style="background:#7F77DD"></div></div><span class="num" id="n1"></span></div>
+<div class="row"><span>بعد الـ"Downtime"</span><div class="trk"><div class="band" id="b2"></div><div class="fill" id="f2" style="background:#378ADD"></div></div><span class="num" id="n2"></span></div>
+<div class="row"><span>بعد الـ"Pre-dilution" = الواصلة</span><div class="trk"><div class="band" id="b3"></div><div class="fill" id="f3"></div></div><span class="num" id="n3"></span></div>
+<div class="k" style="margin-top:2px">الشريط الأخضر = هدف KDIGO للجرعة <b>الواصلة</b>: 20–25 mL/kg/h. المقياس من 0 لـ 50.</div>
+<div class="k" style="margin-top:12px">يوم الماكينة (24 ساعة): أخضر = شغالة، رمادي = واقفة</div>
+<div class="strip" id="strip"></div>
+<div class="cards">
+<div class="card"><div class="k">الـ"Effluent" المكتوب</div><div class="v" id="c1"></div><div class="k">mL/h على الماكينة</div></div>
+<div class="card"><div class="k">الجرعة الواصلة</div><div class="v" id="c2"></div><div class="k" id="c2n"></div></div>
+<div class="card"><div class="k">«البيسين» اتصفّى كام مرة في اليوم</div><div class="v" id="c3"></div><div class="k">Kt/V يومي ≈ جرعة × 24 ÷ 600</div></div>
+</div>
+<div class="ctl"><span>الوزن</span><input type="range" id="wt" min="40" max="150" value="80"><span id="wtV"></span></div>
+<div class="ctl"><span>الجرعة المكتوبة</span><input type="range" id="rx" min="15" max="50" value="30"><span id="rxV"></span></div>
+<div class="ctl"><span>ساعات التشغيل/يوم</span><input type="range" id="hr" min="8" max="24" value="20"><span id="hrV"></span></div>
+<div class="ctl"><span>الـ"Pre-dilution"</span><input type="range" id="pre" min="0" max="2500" step="100" value="1000"><span id="preV"></span></div>
+<div class="ctl"><span>الـ"Qb"</span><input type="range" id="qb" min="100" max="300" step="10" value="200"><span id="qbV"></span></div>
+<div class="ctl"><span>الـ"Hct"</span><input type="range" id="hct" min="20" max="45" value="30"><span id="hctV"></span></div>
+</div>
+<script>
+(function(){
+const $=i=>document.getElementById(i),MAX=50,pc=x=>Math.min(100,x/MAX*100)+'%';
+['b1','b2','b3'].forEach(b=>{$(b).style.right=pc(20);$(b).style.width=(5/MAX*100)+'%';});
+const st=$('strip');for(let i=0;i<24;i++)st.appendChild(document.createElement('div'));
+function u(){
+ const w=+$('wt').value,rx=+$('rx').value,hr=+$('hr').value,pre=+$('pre').value,qb=+$('qb').value,h=+$('hct').value/100;
+ const qp=qb*60*(1-h),fac=qp/(qp+pre),d2=rx*hr/24,d3=d2*fac;
+ $('wtV').textContent=w+' kg';$('rxV').textContent=rx+' mL/kg/h';$('hrV').textContent=hr+' h';$('preV').textContent=pre+' mL/h';$('qbV').textContent=qb+' mL/min';$('hctV').textContent=Math.round(h*100)+'%';
+ $('f1').style.width=pc(rx);$('f2').style.width=pc(d2);$('f3').style.width=pc(d3);
+ $('n1').textContent=rx.toFixed(1);$('n2').textContent=d2.toFixed(1);$('n3').textContent=d3.toFixed(1);
+ let col,note;
+ if(d3<20){col='#E24B4A';note='أقل من الهدف: جرعة ناقصة';}
+ else if(d3<=25){col='#1D9E75';note='في الهدف';}
+ else if(d3<=35){col='#BA7517';note='فوق الهدف: مفيش فايدة زيادة';}
+ else{col='#D85A30';note='جرعة عالية: لحالات خاصة بس';}
+ $('f3').style.background=col;$('c2').style.color=col;
+ $('c1').textContent=Math.round(rx*w);$('c2').textContent=d3.toFixed(1);$('c2n').textContent=note;
+ $('c3').textContent=(d3*24/600).toFixed(2)+'×';
+ [...st.children].forEach((c,i)=>c.style.background=i<hr?'#1D9E75':'var(--border-strong)');
+}
+['wt','rx','hr','pre','qb','hct'].forEach(i=>$(i).addEventListener('input',u));u();
+})();
+</script>
+
+</body></html>
